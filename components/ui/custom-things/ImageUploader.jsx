@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 
 import React, { useEffect, useState, useRef } from "react"
 import ProgressDialog from "./progress-dialog/progress-dialog"
+import PictureAlert from "./PictureAlert"
 
 export default function ImageUploader() {
 
@@ -43,6 +44,10 @@ export default function ImageUploader() {
   const [progressOpen, setProgressOpen] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [abortController, setAbortController] = useState();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogImg, setDialogImg] = useState("");
+
+
 
   const file = files[0]?.file || null;
   const UploadImage = async (e) => {
@@ -73,6 +78,10 @@ export default function ImageUploader() {
       setProgress(100);
       // Optionally, you can close the dialog after a delay or show a success message
       console.log(res.url);
+      setTimeout(() => {
+        setDialogImg(res.url);
+        setDialogOpen(true);
+      }, 3000);
     } catch (err) {
       if (abortController.signal.aborted) {
         console.log("Canceled Success");
@@ -166,6 +175,15 @@ export default function ImageUploader() {
           setProgressOpen(false);
           console.log("Canceled Success");
         }}
+      />
+      <PictureAlert
+        isOpen={dialogOpen}
+        onOpenChange={setDialogOpen}
+        imageSrc={dialogImg}
+        title="Upload Successful!"
+        description="Your image has been uploaded."
+        onOk={() => setDialogOpen(false)}
+        onClose={() => setDialogOpen(false)}
       />
     </>
   );

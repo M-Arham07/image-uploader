@@ -19,12 +19,12 @@ export default function ProgressDialog({ progress, isOpen, setIsOpen, isProcessi
     <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
       <AlertDialogContent className="sm:max-w-md">
         <AlertDialogHeader>
-          <AlertDialogTitle>Processing Task</AlertDialogTitle>
+          <AlertDialogTitle>Uploading Image...</AlertDialogTitle>
           <AlertDialogDescription>
             {isProcessing
               ? "Please wait while we process your request..."
               : progress === 100
-                ? "Task completed successfully!"
+                ? "Image uploaded successfully!"
                 : "Uploading will begin when you click Upload."}
           </AlertDialogDescription>
         </AlertDialogHeader>
