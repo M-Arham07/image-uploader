@@ -8,12 +8,16 @@ import { Button } from "@/components/ui/button"
 
 import React, { useEffect, useState, useRef } from "react"
 import ProgressDialog from "./progress-dialog/progress-dialog"
-import PictureAlert from "./PictureAlert"
+import PictureAlert from "./CodeAlert"
+import GenerateCode from "@/server-utilities/GenerateCode";
+import ConnectDB from "@/server-utilities/ConnectDB";
+import SaveCode from "@/server-utilities/SaveCode";
+import Link from "next/link";
 
 export default function ImageUploader() {
 
 
-  const maxSizeMB = 2
+  const maxSizeMB = 4
   const maxSize = maxSizeMB * 1024 * 1024 // 2MB default
 
   const [
@@ -35,7 +39,7 @@ export default function ImageUploader() {
   const fileName = files[0]?.file.name || null
 
   // EDGE STORE:: 
-   const { edgestore } = useEdgeStore();
+  const { edgestore } = useEdgeStore();
 
   useEffect(() => setSubmitError(""), [files]) // Remove submit error if image changed!
 
@@ -45,7 +49,8 @@ export default function ImageUploader() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [abortController, setAbortController] = useState();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [dialogImg, setDialogImg] = useState("");
+  // Removed dialogImg state, not used anymore
+  const [dialogCode, setDialogCode] = useState("");
 
 
 
@@ -76,12 +81,26 @@ export default function ImageUploader() {
       });
       setIsProcessing(false);
       setProgress(100);
-      // Optionally, you can close the dialog after a delay or show a success message
-      console.log(res.url);
-      setTimeout(() => {
-        setDialogImg(res.url);
-        setDialogOpen(true);
-      }, 3000);
+
+      // REMOVE PROCESSING DIALOG
+      setIsProcessing(false);
+      setProgressOpen(false);
+
+
+      // i will first geenrate the code and display it to user before performing database call!
+
+      
+      const code = GenerateCode();
+       setDialogCode(code);
+      setDialogOpen(true);
+      await SaveCode(res.url,code); // res.url contains the url received from edgestore!
+
+     
+      return true;
+
+
+
+
     } catch (err) {
       if (abortController.signal.aborted) {
         console.log("Canceled Success");
@@ -95,17 +114,22 @@ export default function ImageUploader() {
 
   return (
     <>
-      <form onSubmit={UploadImage} className="flex flex-1 flex-col items-center justify-center min-h-screen">
-        <div className="flex flex-col gap-2 w-full max-w-md">
+      <form 
+        onSubmit={UploadImage} 
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className="flex flex-1 flex-col items-center justify-center min-h-screen relative"
+        data-dragging={isDragging || undefined}
+      >
+        <div className="absolute inset-0 pointer-events-none transition-colors data-[dragging=true]:bg-accent/10" />
+        <div className="flex flex-col gap-2 w-full max-w-md sm:max-w-[600px] md:max-w-[700px] lg:max-w-[800px] mb-20 sm:mb-0">
           <div className="relative">
             {/* Drop area */}
             <div
-              onDragEnter={handleDragEnter}
-              onDragLeave={handleDragLeave}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
               data-dragging={isDragging || undefined}
-              className="border-input data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50 relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors has-[input:focus]:ring-[3px]">
+              className="border-input data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50 relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors has-[input:focus]:ring-[3px] w-full">
               <input {...getInputProps()} className="sr-only" aria-label="Upload image file" />
               {previewUrl ? (
                 <div className="absolute inset-0 flex items-center justify-center p-4">
@@ -122,12 +146,20 @@ export default function ImageUploader() {
                     aria-hidden="true">
                     <ImageIcon className="size-4 opacity-60" />
                   </div>
-                  <p className="mb-1.5 text-sm font-medium">Drop your image here</p>
+                  {/*=== HIDE Drop your image here on smaller screeens  ===*/}
+                  <p className="mb-1.5 text-sm hidden font-medium lg:flex">Drop your image anywhere on this page</p>
+
+                  {/* "Show Select your image" instead on mobile phones! */}
+                  <p className="mb-1.5 text-sm lg:hidden font-medium">Select your image</p>
+
+
+
+
                   <p className="text-muted-foreground text-xs">
                     SVG, PNG, JPG or GIF (max. {maxSizeMB}MB)
                   </p>
                   <Button variant="outline" className="mt-4" type="button" onClick={openFileDialog}>
-                    <UploadIcon className="-ms-1 size-4 opacity-60" aria-hidden="true" />
+                    <UploadIcon className="-ms-1 size-4 opacity-60 cursor-pointer" aria-hidden="true" />
                     Select image
                   </Button>
                 </div>
@@ -162,6 +194,13 @@ export default function ImageUploader() {
             <UploadIcon className="-ms-1 size-4 opacity-60 mr-2" aria-hidden="true" />
             Upload
           </Button>
+          <div className="flex items-center justify-center w-full my-5 sm:mt-2 gap-2">
+            <span className="flex-1 h-px bg-muted-foreground/20" />
+            <span className="text-xs text-muted-foreground font-semibold px-2">OR</span>
+            <span className="flex-1 h-px bg-muted-foreground/20" />
+          </div>
+          {/* Retrieve Button */}
+          <Link href='/retrieve'><Button variant="secondary" type="button" className="w-full max-w-xs mt-1 sm:mt-[-12px] mx-auto flex justify-center">Retrieve Image</Button></Link>
         </div>
       </form>
       <ProgressDialog
@@ -179,9 +218,8 @@ export default function ImageUploader() {
       <PictureAlert
         isOpen={dialogOpen}
         onOpenChange={setDialogOpen}
-        imageSrc={dialogImg}
-        title="Upload Successful!"
-        description="Your image has been uploaded."
+        code={dialogCode}
+        copyLabel="Copy Code"
         onOk={() => setDialogOpen(false)}
         onClose={() => setDialogOpen(false)}
       />

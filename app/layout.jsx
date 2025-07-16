@@ -2,6 +2,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { EdgeStoreProvider } from '@/lib/edgestore';
 import "./globals.css";
 
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -20,10 +21,14 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
+      
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased dark`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased dark overflow-hidden`}
       >
-        <EdgeStoreProvider>{children}</EdgeStoreProvider>
+        <EdgeStoreProvider>
+        
+          {children}
+          </EdgeStoreProvider>
       </body>
     </html>
   );
