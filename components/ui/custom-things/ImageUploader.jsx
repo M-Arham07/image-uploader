@@ -94,7 +94,7 @@ export default function ImageUploader() {
        setDialogCode(code);
       setDialogOpen(true);
       await SaveCode(res.url,code); // res.url contains the url received from edgestore!
-
+  
      
       return true;
 
@@ -124,6 +124,10 @@ export default function ImageUploader() {
         data-dragging={isDragging || undefined}
       >
         <div className="absolute inset-0 pointer-events-none transition-colors data-[dragging=true]:bg-accent/10" />
+        <div className="text-center mb-8">
+          <h1 className="text-3xl mb-2 text-gray-900 dark:text-white font-extrabold">Image Shared</h1>
+          <p className="text-gray-600 dark:text-gray-400">Share your images securely with a unique access code.</p>
+        </div>
         <div className="flex flex-col gap-2 w-full max-w-md sm:max-w-[600px] md:max-w-[700px] lg:max-w-[800px] mb-20 sm:mb-0">
           <div className="relative">
             {/* Drop area */}

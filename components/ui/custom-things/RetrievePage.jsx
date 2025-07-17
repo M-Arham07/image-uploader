@@ -45,8 +45,8 @@ export default function RetrievePage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 pb-20 sm:pb-0">
-            <Card className="w-full max-w-md bg-transparent border-2">
+        <div className="min-h-screen flex items-center justify-center p-4 pb-45 sm:pb-0">
+            <Card className="w-full max-w-md bg-transparent shadow-accent">
                 {!retrievedUrl ? (
                     <>
                         <CardHeader>
