@@ -16,6 +16,8 @@ export default async function RetrieveURL(code){
         }
 
         // if code exists , take url from that document and return it!
+
+        // return the whole imgURL String array
         return found.imgURL;
 
 

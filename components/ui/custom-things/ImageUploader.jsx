@@ -13,6 +13,7 @@ import GenerateCode from "@/server-utilities/GenerateCode";
 import ConnectDB from "@/server-utilities/ConnectDB";
 import SaveCode from "@/server-utilities/SaveCode";
 import Link from "next/link";
+import { Share1Icon } from "@radix-ui/react-icons";
 
 export default function ImageUploader() {
 
@@ -34,7 +35,14 @@ export default function ImageUploader() {
   ] = useFileUpload({
     accept: "image/svg+xml,image/png,image/jpeg,image/jpg,image/gif",
     maxSize,
+    multiple: true,
+    maxFiles: 10
   })
+
+
+
+
+
   const previewUrl = files[0]?.preview || null
   const fileName = files[0]?.file.name || null
 
@@ -54,54 +62,69 @@ export default function ImageUploader() {
 
 
 
-  const file = files[0]?.file || null;
   const UploadImage = async (e) => {
     e.preventDefault();
 
-    if (!file) { // if no file!
-      setSubmitError("Please select an image before uploading.");
+    if (files.length === 0) {
+      setSubmitError("Please select at least one image.");
       return;
     }
 
-    setSubmitError(""); // REMOVE ERROR
+    setSubmitError("");
     setProgress(0);
     setProgressOpen(true);
     setIsProcessing(true);
 
-    // Upload Logic with AbortController
     const abortController = new AbortController();
     setAbortController(abortController);
-    try {
-      const res = await edgestore.publicFiles.upload({
-        file,
-        signal: abortController.signal,
-        onProgressChange: (progress) => {
-          setProgress(progress);
-        },
-      });
-      setIsProcessing(false);
-      setProgress(100);
 
-      // REMOVE PROCESSING DIALOG
+    try {
+      const fileArray = files.map(f => f.file);
+      
+      // Track progress for all files
+      let completedFiles = 0;
+      const totalFiles = fileArray.length;
+
+      // Upload files in parallel using Promise.all
+      const uploadPromises = fileArray.map((file, index) => 
+        edgestore.publicFiles.upload({
+          file,
+          options: {
+            temporary: true
+          },
+          onProgressChange: (progress) => {
+            // Calculate combined progress for all files
+            const combinedProgress = ((completedFiles + progress / 100) / totalFiles) * 100;
+            setProgress(Math.floor(combinedProgress));
+          },
+        }).then(result => {
+          completedFiles++;
+          return result;
+        })
+      );
+
+      const results = await Promise.all(uploadPromises);
+      const uploads = results.map(res => res.url);
+      setProgress(100);
       setIsProcessing(false);
       setProgressOpen(false);
 
-
-      // i will first geenrate the code and display it to user before performing database call!
-
-      
+      // Generate code and show dialog before database save
       const code = GenerateCode();
-       setDialogCode(code);
+      setDialogCode(code);
       setDialogOpen(true);
-      await SaveCode(res.url,code); // res.url contains the url received from edgestore!
-  
-     
+
+      // After user sees the code, save to database
+      await SaveCode(uploads, code);
+
       return true;
 
 
 
 
     } catch (err) {
+      console.error(err);
+
       if (abortController.signal.aborted) {
         console.log("Canceled Success");
       } else {
@@ -114,8 +137,8 @@ export default function ImageUploader() {
 
   return (
     <>
-      <form 
-        onSubmit={UploadImage} 
+      <form
+        onSubmit={UploadImage}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
@@ -126,7 +149,7 @@ export default function ImageUploader() {
         <div className="absolute inset-0 pointer-events-none transition-colors data-[dragging=true]:bg-accent/10" />
         <div className="text-center mb-8">
           <h1 className="text-3xl mb-2 text-gray-900 dark:text-white font-extrabold">Image Shared</h1>
-          <p className="text-gray-600 dark:text-gray-400">Share your images securely with a unique access code.</p>
+          <p className="text-gray-600 dark:text-gray-400 text-[0.9rem] sm:text-[1.2rem]">Share your images securely with a unique access code.</p>
         </div>
         <div className="flex flex-col gap-2 w-full max-w-md sm:max-w-[600px] md:max-w-[700px] lg:max-w-[800px] mb-20 sm:mb-0">
           <div className="relative">
@@ -135,12 +158,24 @@ export default function ImageUploader() {
               data-dragging={isDragging || undefined}
               className="border-input data-[dragging=true]:bg-accent/50 has-[input:focus]:border-ring has-[input:focus]:ring-ring/50 relative flex min-h-52 flex-col items-center justify-center overflow-hidden rounded-xl border border-dashed p-4 transition-colors has-[input:focus]:ring-[3px] w-full">
               <input {...getInputProps()} className="sr-only" aria-label="Upload image file" />
-              {previewUrl ? (
-                <div className="absolute inset-0 flex items-center justify-center p-4">
-                  <img
-                    src={previewUrl}
-                    alt={files[0]?.file?.name || "Uploaded image"}
-                    className="mx-auto max-h-full rounded object-contain" />
+              {files.length > 0 ? (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 w-full max-h-[40vh] sm:max-h-[50vh] overflow-y-auto custom-scrollbar">
+                  {files.map((file, index) => (
+                    <div key={file.id} className="relative group aspect-square">
+                      <img
+                        src={file.preview}
+                        alt={file.file.name || `Image ${index + 1}`}
+                        className="w-full h-full rounded object-cover"
+                      />
+                      <button
+                        type="button"
+                        className="absolute top-2 right-2 opacity-100 focus-visible:border-ring focus-visible:ring-ring/50 z-50 flex size-8 cursor-pointer items-center justify-center rounded-full bg-black/60 text-white transition-all outline-none hover:bg-black/80 focus-visible:ring-[3px]"
+                        onClick={() => removeFile(file.id)}
+                        aria-label="Remove image">
+                        <XIcon className="size-4" aria-hidden="true" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <div
@@ -151,10 +186,10 @@ export default function ImageUploader() {
                     <ImageIcon className="size-4 opacity-60" />
                   </div>
                   {/*=== HIDE Drop your image here on smaller screeens  ===*/}
-                  <p className="mb-1.5 text-sm hidden font-medium lg:flex">Drop your image anywhere on this page</p>
+                  <p className="mb-1.5 text-sm hidden font-medium lg:flex">Drop your images anywhere on this page</p>
 
                   {/* "Show Select your image" instead on mobile phones! */}
-                  <p className="mb-1.5 text-sm lg:hidden font-medium">Select your image</p>
+                  <p className="mb-1.5 text-sm lg:hidden font-medium">Select your images</p>
 
 
 
@@ -162,8 +197,8 @@ export default function ImageUploader() {
                   <p className="text-muted-foreground text-xs">
                     SVG, PNG, JPG or GIF (max. {maxSizeMB}MB)
                   </p>
-                  <Button variant="outline" className="mt-4" type="button" onClick={openFileDialog}>
-                    <UploadIcon className="-ms-1 size-4 opacity-60 cursor-pointer" aria-hidden="true" />
+                  <Button variant="outline" className="mt-4 cursor-pointer" type="button" onClick={openFileDialog}>
+                    <UploadIcon className="-ms-1 size-4 opacity-60" aria-hidden="true" />
                     Select image
                   </Button>
                 </div>
@@ -194,9 +229,9 @@ export default function ImageUploader() {
               <span>{submitError}</span>
             </div>
           )}
-          <Button type="submit" className="w-full max-w-[180px] mt-2 mx-auto flex justify-center">
-            <UploadIcon className="-ms-1 size-4 opacity-60 mr-2" aria-hidden="true" />
-            Upload
+          <Button type="submit" className="w-full max-w-[180px] mt-2 mx-auto flex justify-center cursor-pointer">
+            <Share1Icon className="-ms-1 size-4 opacity-60 mr-2" aria-hidden="true" />
+            Share
           </Button>
           <div className="flex items-center justify-center w-full my-5 sm:mt-2 gap-2">
             <span className="flex-1 h-px bg-muted-foreground/20" />
@@ -204,7 +239,7 @@ export default function ImageUploader() {
             <span className="flex-1 h-px bg-muted-foreground/20" />
           </div>
           {/* Retrieve Button */}
-          <Link href='/retrieve'><Button variant="secondary" type="button" className="w-full max-w-xs mt-1 sm:mt-[-12px] mx-auto flex justify-center">Retrieve Image</Button></Link>
+          <Link href='/retrieve'><Button variant="secondary" type="button" className="w-full max-w-xs mt-1 sm:mt-[-12px] mx-auto flex justify-center cursor-pointer">Retrieve Image</Button></Link>
         </div>
       </form>
       <ProgressDialog

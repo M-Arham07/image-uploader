@@ -23,6 +23,7 @@ export default function RetrievePage() {
 
             // CALL SERVER ACTION TO RETRIEVE URL!
             const imgURL = await RetrieveURL(shareCode);
+
             setRetrievedUrl(imgURL);
             setStatus("success");
             return true;
@@ -50,9 +51,9 @@ export default function RetrievePage() {
                 {!retrievedUrl ? (
                     <>
                         <CardHeader>
-                            <CardTitle className="text-2xl">Retrieve Shared Image</CardTitle>
+                            <CardTitle className="text-2xl">Retrieve Shared Images</CardTitle>
                             <CardDescription>
-                                Enter your share code to access the shared image.
+                                Enter your share code to access the shared images.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -74,7 +75,7 @@ export default function RetrievePage() {
                                         {error}
                                     </div>
                                 )}
-                                <Button type="submit" className="w-full" disabled={status === "loading"}>
+                                <Button type="submit" className="w-full cursor-pointer" disabled={status === "loading"}>
                                     {status === "loading" ? (
                                         <>
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -99,38 +100,46 @@ export default function RetrievePage() {
                                 <Button variant="ghost" size="icon" onClick={resetForm} className="h-8 w-8 mr-2" aria-label="Back">
                                     <ArrowLeft className="h-4 w-4" />
                                 </Button>
-                                <span>Retrieved Image</span>
+                                <span>Retrieved Images</span>
                             </CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="w-full max-h-[60vh] overflow-auto rounded border">
-                                <img
-                                    src={retrievedUrl}
-                                    alt="Retrieved Shared"
-                                    className="w-full"
-                                />
+                            <div className="max-h-[60vh] overflow-y-auto space-y-4 pr-2">
+                                {retrievedUrl.map(url => (
+                                    <div key={url} className="w-full rounded-lg border shadow-sm overflow-hidden">
+                                        <img
+                                            src={url}
+                                            alt="Retrieved Shared"
+                                            className="w-full object-cover"
+                                        />
+                                    </div>
+                                ))}
                             </div>
                             <Button
-                                className="w-full mt-2"
+                                className="w-full mb-2 cursor-pointer"
                                 variant="default"
                                 onClick={async () => {
                                     try {
-                                        const response = await fetch(retrievedUrl, { mode: 'cors' });
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
-                                        if (downloadRef.current) {
-                                            const DATE = `${String(new Date().getDate()).padStart(2,'0')}-${String(new Date().getMonth()+1).padStart(2,'0')}-${String(new Date().getFullYear()).slice(-2)}`;
-                                            downloadRef.current.href = url;
-                                            downloadRef.current.download = `shared-image(${DATE}).jpg`; //we can SET the name of the downloaded file here, i made a name by adding the current date to it
-                                            downloadRef.current.click();
-                                            setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+                                        // Download all images sequentially
+                                        for (let i = 0; i < retrievedUrl.length; i++) {
+                                            const response = await fetch(retrievedUrl[i], { mode: 'cors' });
+                                            const blob = await response.blob();
+                                            const blobUrl = window.URL.createObjectURL(blob);
+                                            if (downloadRef.current) {
+                                                const DATE = `${String(new Date().getDate()).padStart(2, '0')}-${String(new Date().getMonth() + 1).padStart(2, '0')}-${String(new Date().getFullYear()).slice(-2)}`;
+                                                downloadRef.current.href = blobUrl;
+                                                downloadRef.current.download = `shared-image-${i + 1}(${DATE}).jpg`;
+                                                downloadRef.current.click();
+                                                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between downloads
+                                                window.URL.revokeObjectURL(blobUrl);
+                                            }
                                         }
                                     } catch (err) {
-                                        alert('Failed to download image.');
+                                        alert('Failed to download some images');
                                     }
                                 }}
                             >
-                                Download Image
+                                Download All Images
                             </Button>
                             <a ref={downloadRef} style={{ display: 'none' }}>hidden download</a>
                         </CardContent>

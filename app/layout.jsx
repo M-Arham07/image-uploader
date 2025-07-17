@@ -21,14 +21,11 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased dark overflow-hidden`}
-      >
-        <EdgeStoreProvider>
-        
+        className={`${geistSans.variable} ${geistMono.variable} antialiased dark overflow-hidden`} >
+        <EdgeStoreProvider maxConcurrentUploads={10}>
           {children}
-          </EdgeStoreProvider>
+        </EdgeStoreProvider>
       </body>
     </html>
   );

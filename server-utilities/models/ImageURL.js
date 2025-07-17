@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
+import { object } from "zod";
 
 const Schema=mongoose.Schema;
 
 const imgSchema=new Schema({
     imgURL:{
-        type:String,
+        type:[String], //An array of strings
         required:true
     },
     code:{
