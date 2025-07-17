@@ -1,6 +1,9 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import { EdgeStoreProvider } from '@/lib/edgestore';
+
+import Link from "next/link";
 import "./globals.css";
+import { GitHubLogoIcon, InstagramLogoIcon } from "@radix-ui/react-icons";
 
 
 const geistSans = Geist({
@@ -22,7 +25,24 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased dark overflow-hidden`} >
+        className={`${geistSans.variable} ${geistMono.variable} antialiased dark overflow-hidden relative`} >
+       
+        <Link 
+          href="https://github.com/M-Arham07" 
+          target="_blank"
+          className="absolute top-4 left-4 opacity-75 hover:opacity-100 transition-opacity"
+        >
+          <GitHubLogoIcon className="w-6 h-6 -z-10 text-gray-700 dark:text-gray-300" />
+        </Link>
+
+        
+          <Link 
+          href="https://instagram.com/arh4m_su" 
+          target="_blank"
+          className="absolute top-4 left-14 opacity-75 hover:opacity-100 transition-opacity"
+        >
+          <InstagramLogoIcon className="w-6 h-6 -z-10 text-gray-700 dark:text-gray-300" />
+        </Link>
         <EdgeStoreProvider maxConcurrentUploads={10}>
           {children}
         </EdgeStoreProvider>
