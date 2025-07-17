@@ -22,14 +22,19 @@ export default function RetrievePage() {
             setError("");
 
             // CALL SERVER ACTION TO RETRIEVE URL!
-            const imgURL = await RetrieveURL(shareCode);
+            const response = await RetrieveURL(shareCode);
 
-            setRetrievedUrl(imgURL);
+            if(response?.errmsg){
+                throw new Error(response.errmsg)
+            }
+
+            setRetrievedUrl(response);
             setStatus("success");
             return true;
 
         }
         catch (err) {
+            console.error("Error is",err)
             setStatus("idle");
             setError(err?.message || "Server Down! Please try again later.");
             return false;

@@ -25,10 +25,10 @@ export default async function RetrieveURL(code){
     catch(err){
         console.error(err)
         if(err?.message.includes("Invalid or expired sharing code!")){
-            throw err;
+            return {errmsg:err.message}
         }
         else{
-            throw new Error("Server Down! Please try again later.")
+            return {errmsg:"Server Down! Please try again later."}
         }
 
     }
